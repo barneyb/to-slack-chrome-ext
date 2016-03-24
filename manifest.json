@@ -1,0 +1,24 @@
+{
+    "manifest_version": 2,
+
+    "name": "Send to #naughty",
+    "description": "This extension allowed easy sending of images, links, and pages to the #naughty channel",
+    "version": "1.0",
+    "permissions": [
+        "contextMenus",
+        "https://hooks.slack.com/"
+    ],
+    "icons": {
+        "16": "icon-16.png",
+        "19": "icon-19.png",
+        "48": "icon-48.png",
+        "64": "icon-64.png",
+        "128": "icon-128.png",
+        "256": "icon-256.png"
+    },
+    "background": {
+        "scripts": [
+            "naughty.js"
+        ]
+    }
+}
