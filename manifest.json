@@ -1,11 +1,12 @@
 {
     "manifest_version": 2,
 
-    "name": "Send to #naughty",
-    "description": "This extension allowed easy sending of images, links, and pages to the #naughty channel",
-    "version": "1.0",
+    "name": "Send to Slack",
+    "description": "This extension allowed easy sending of images, links, and pages to a Slack channel (via WebHook)",
+    "version": "2.0",
     "permissions": [
         "contextMenus",
+        "storage",
         "https://hooks.slack.com/"
     ],
     "icons": {
@@ -16,8 +17,14 @@
         "128": "icon-128.png",
         "256": "icon-256.png"
     },
+    "options_ui": {
+        "page": "options.html",
+        "chrome_style": true
+//        , "open_in_tab": true
+    },
     "background": {
         "scripts": [
+            "utils.js",
             "naughty.js"
         ]
     }
