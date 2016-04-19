@@ -14,7 +14,7 @@ function rebuild(targets) {
             chrome.contextMenus.create({
                 title: n + " image",
                 contexts: ["image"],
-                onclick: function(info, tab) {
+                onclick: function(info) {
                     sendUrl(hook, {
                         text: "<" + info.srcUrl + ">"
                     });
@@ -23,7 +23,7 @@ function rebuild(targets) {
             chrome.contextMenus.create({
                 title: n + " link",
                 contexts: ["link"],
-                onclick: function(info, tab) {
+                onclick: function(info) {
                     sendUrl(hook, {
                         text: "<" + info.linkUrl + ">",
                         unfurl_media: true,
@@ -34,7 +34,7 @@ function rebuild(targets) {
             chrome.contextMenus.create({
                 title: n + " page",
                 contexts: ["page"],
-                onclick: function(info, tab) {
+                onclick: function(info) {
                     sendUrl(hook, {
                         text: "<" + info.pageUrl + ">",
                         unfurl_media: true,
