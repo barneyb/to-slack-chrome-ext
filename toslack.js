@@ -9,7 +9,7 @@ function sendUrl(hook, payload) {
 function rebuild(targets) {
     var json = parseTargets(targets);
     chrome.contextMenus.removeAll();
-    for (var n in json) {if (json.hasOwnProperty(n)) {
+    for (var n in json) if (json.hasOwnProperty(n)) {
         (function(n, hook) {
             chrome.contextMenus.create({
                 title: n + " image",
@@ -43,7 +43,7 @@ function rebuild(targets) {
                 }
             });
         }(n, json[n]));
-    }}
+    }
 }
 // listen for changes
 chrome.storage.onChanged.addListener(function(changes, area) {
