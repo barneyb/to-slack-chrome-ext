@@ -2,12 +2,15 @@
     "manifest_version": 2,
 
     "name": "Send to Slack",
-    "description": "This extension allowed easy sending of images, links, and pages to a Slack channel (via WebHook)",
+    "description": "Easily send pages, media, and links to an HTTP endpoint (e.g., a Slack channel's WebHook).",
     "version": "2.0",
     "permissions": [
         "contextMenus",
-        "storage",
-        "https://hooks.slack.com/"
+        "storage"
+    ],
+    "optional_permissions": [
+        "http://*/",
+        "https://*/"
     ],
     "icons": {
         "16": "icon-16.png",
@@ -19,13 +22,14 @@
     },
     "options_ui": {
         "page": "options.html",
-        "chrome_style": true
-//        , "open_in_tab": true
+        "chrome_style": true,
+        "open_in_tab": true
     },
     "background": {
         "scripts": [
             "utils.js",
             "toslack.js"
-        ]
+        ],
+        "persistent": false
     }
 }

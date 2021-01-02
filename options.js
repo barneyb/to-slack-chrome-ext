@@ -1,25 +1,36 @@
+/*global chrome */
+let statusTimeout;
+function showStatus(msg) {
+    const status = $('status');
+    status.textContent = msg;
+    clearTimeout(statusTimeout);
+    statusTimeout = setTimeout(function() {
+        status.textContent = '';
+    }, 2500);
+}
+
 // Saves options to chrome.storage.sync.
 function save_options() {
-    var targets = document.getElementById('targets').value;
+    const textarea = $('targets');
+    let targets = textarea.value;
     try {
         parseTargets(targets);
     } catch (e) {
-        var status = document.getElementById('status');
-        status.textContent = 'Illegal targets: ' + e.message;
-        setTimeout(function() {
-            status.textContent = '';
-        }, 750);
+        showStatus("Illegal targets: " + e.message);
         return;
     }
+    // reformat
+    let indent = 2;
+    let match = targets.trim().match(/\n +/);
+    if (match.index >= 0) {
+        indent = match[0].length - 1;
+    }
+    targets = JSON.stringify(JSON.parse(targets), null, indent);
+    textarea.value = targets;
     chrome.storage.sync.set({
         targets: targets
     }, function() {
-        // Update status to let user know options were saved.
-        var status = document.getElementById('status');
-        status.textContent = 'Options saved.';
-        setTimeout(function() {
-            status.textContent = '';
-        }, 750);
+        showStatus("Targets saved.");
     });
 }
 
@@ -29,9 +40,33 @@ function restore_options() {
     chrome.storage.sync.get({
         targets: null
     }, function(items) {
-        document.getElementById('targets').value = items.targets;
+        $('targets').value = items.targets;
     });
 }
 document.addEventListener('DOMContentLoaded', restore_options);
-document.getElementById('save').addEventListener('click',
+$('save').addEventListener('click',
     save_options);
+
+try {
+    $('full-example').innerText = JSON.stringify(parseTargets($('example').innerText), null, 4);
+} catch (e) {
+    console.log(e)
+    $('full-example').innerText = e;
+}
+
+const config = parseTargets('{"glerg":' + $('custom-example').innerText + '}').glerg;
+let rendered;
+try {
+    rendered = render_body(config.post_type.format, {
+        url: "https://about.google/",
+        pageUrl: "https://google.com/",
+    });
+    rendered = 'POST ...\n' +
+        'Host: ...\n' +
+        'Content-Type: ' + config.post_type.content_type + '\n' +
+        '\n' +
+        JSON.stringify(JSON.parse(rendered), null, 4);
+} catch (e) {
+    rendered = e;
+}
+$('custom-render').innerText = rendered;

@@ -1,13 +1,144 @@
 <!DOCTYPE html>
 <html>
-<head><title>My Test Extension Options</title></head>
+<head>
+    <title>Send to Slack Options</title>
+    <style>
+        html {
+            background-color: #eee;
+        }
+        body {
+            background-color: #fff;
+            font-size: 1rem;
+            max-width: 800px;
+            margin: auto;
+            padding: 0.5rem 2rem 2rem;
+        }
+        h1, h2 {
+            margin: 0.5em 0 0.5em -1rem;
+        }
+        textarea {
+            font-family: monospace;
+        }
+        code {
+            display: inline-block;
+            line-height: initial;
+            padding: 0 0.25em;
+            margin: 0 0.25em;
+            border-radius: 0.25em;
+        }
+        pre {
+            padding: 0.5em;
+            border-radius: 0.5em;
+            overflow-y: auto;
+        }
+        code, pre {
+            border: 1px solid #eee;
+            background-color: #f7f7f7;
+        }
+    </style>
+</head>
 <body>
 
-Slack Targets (as a JSON object, labels for keys, WebHook URLs for values):<br/>
-<textarea id="targets" style="width:60em;height:10em"></textarea>
+<h1>Send to Slack</h1>
+
+<p>Enter your target configuration:
+</p>
+
+<textarea id="targets" style="width:100%;min-height:15em"></textarea>
 
 <div id="status"></div>
 <button id="save">Save</button>
+
+<hr />
+
+<h2>Documentation</h2>
+
+<p>This example configures two mythical targets:
+</p>
+
+<pre id="example">
+{
+    "example.com": {
+        "contexts": ["media"],
+        "url": "https://example.com/jasmine"
+    },
+    "@jasmine": "https://hooks.slack.com/services/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"
+}
+</pre>
+
+<p>After full expansion:
+
+<pre id="full-example">[[...still rendering...]]</pre>
+
+<p>Slack targets may be specified by simply listing the webhook URL.
+</p>
+
+<p>If no <code>contexts</code> are provided, <code>["page", "link",
+    "media"]</code> will be used. The <code>"media"</code> alias is
+    shorthand for <code>"image"</code>, <code>"video"</code>, and
+    <code>"audio"</code>.
+</p>
+
+<p>If no <code>post_type</code> is specified, <code>"raw"</code> will be used.
+    The available types are:
+</p>
+
+<dl>
+    <dt><code>raw</code></dt>
+    <dd>The raw URL. From <code>https://google.com/</code>, sending the page
+        will yield:
+        <pre>
+POST ...
+Host: ...
+Content-Type: text/plain
+
+https://google.com/
+</pre>
+    </dd>
+    <dt><code>slack</code></dt>
+    <dd>A bare-bones Slack webhook body. From <code>https://google.com/</code>,
+        sending the page will yield:
+    <pre>
+POST ...
+Host: ...
+Content-Type: application/json
+
+{
+    "text": "&lt;https://google.com/&gt;",
+    "unfurl_media": true,
+    "unfurl_links": true
+}
+</pre>
+    </dd>
+    <dt><code>{object}</code></dt>
+    <dd>A custom body rendered via the <code>format</code> format string with
+        <code>content_type</code> as its <code>Content-Type</code> header.
+        Available substitutions are <code>$url</code>, <code>$pageUrl</code>,
+        <code>$linkUrl</code>, and <code>$srcUrl</code>. The first is the
+        context url (it will always match one of the others). The first two will
+        never be empty, but the others might be. E.g., if you click on a link,
+        <code>$url</code> will match <code>$linkUrl</code>, and
+        <code>$srcUrl</code> will be empty. If the link is an image, everything
+        will be populated, and <code>$url</code> will instead match
+        <code>$srcUrl</code>.
+
+        <p>Consider this config for an alternate Slack webhook body:
+        <pre id="custom-example">
+{
+    "contexts": ["link"],
+    "post_type": {
+        "format": "{\"text\":\"<$url> (from $pageUrl)\",\"unfurl_links\":false}",
+        "content_type": "application/json"
+    }
+}
+</pre>
+
+        <p>From <code>https://google.com/</code>, sending the "About" link will
+            yield:
+        </p>
+        <pre id="custom-render">[[...still rendering...]]</pre>
+    </dd>
+</dl>
 
 <script src="utils.js"></script>
 <script src="options.js"></script>

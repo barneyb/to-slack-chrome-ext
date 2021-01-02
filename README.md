@@ -1,14 +1,19 @@
 # to-slack-chrome-ext
 
-A simple chrome extension for sending 'stuff' to Slack channel(s), via WebHooks.
+A simple chrome extension for sending 'stuff' to HTTP endpoints. For example,
+a Slack channel (via its WebHook).
 
-Once installed, hit the options pane and enter your config packet. Something like this:
+Once installed, open the extension options and configure a target or three.
 
 ```
 {
-  "#general": "https://hooks.slack.com/services/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",
-  "@jasmine": "https://hooks.slack.com/services/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"
+    "example.com": {
+        "contexts": ["media"],
+        "url": "https://example.com/jasmine"
+    },
+    "@jasmine": "https://hooks.slack.com/services/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"
 }
 ```
 
-If you list a single hook, it will be on the context menu directly. Multiple hooks will be grouped together in a single submenu.
+If you list a single target, it will be on the context menu directly. Multiple
+available targets will be grouped together in a single submenu.

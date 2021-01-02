@@ -1,60 +1,92 @@
-function sendUrl(hook, payload) {
-    payload = JSON.stringify(payload);
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {};
-    xhr.open("POST", hook, true);
-    xhr.setRequestHeader("Content-type", "application/json");
-    xhr.send(payload);
+/*global chrome */
+function sendUrl(target, info) {
+    let origin = target.url.split("/").slice(0, 3).join("/") + "/";
+    chrome.permissions.request({
+        origins: [origin]
+    }, function(granted) {
+        if (granted) {
+            let pt = target.post_type;
+            let body = render_body(pt.format, info);
+            // noinspection JSIgnoredPromiseFromCall
+            fetch(target.url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": pt.content_type,
+                },
+                body,
+            });
+        }
+    });
 }
-function rebuild(targets) {
-    var json = parseTargets(targets);
-    chrome.contextMenus.removeAll();
-    for (var n in json) if (json.hasOwnProperty(n)) {
-        (function(n, hook) {
-            chrome.contextMenus.create({
-                title: n + " image",
-                contexts: ["image"],
-                onclick: function(info) {
-                    sendUrl(hook, {
-                        text: "<" + info.srcUrl + ">"
-                    });
-                }
-            });
-            chrome.contextMenus.create({
-                title: n + " link",
-                contexts: ["link"],
-                onclick: function(info) {
-                    sendUrl(hook, {
-                        text: "<" + info.linkUrl + ">",
-                        unfurl_media: true,
-                        unfurl_links: true
-                    });
-                }
-            });
-            chrome.contextMenus.create({
-                title: n + " page",
-                contexts: ["page"],
-                onclick: function(info) {
-                    sendUrl(hook, {
-                        text: "<" + info.pageUrl + ">",
-                        unfurl_media: true,
-                        unfurl_links: true
-                    });
-                }
-            });
-        }(n, json[n]));
+
+const handlers = new Map();
+
+function addContextUrl(ctx, info) {
+    switch (ctx) {
+        case "page":
+        case "frame":
+            return {
+                url: info.pageUrl,
+                ...info,
+            }
+        case "link":
+            return {
+                url: info.linkUrl,
+                ...info,
+            }
+        case "audio":
+        case "image":
+        case "video":
+            return {
+                url: info.srcUrl,
+                ...info,
+            }
     }
 }
+
+function rebuild(targets) {
+    const json = parseTargets(targets);
+    chrome.contextMenus.removeAll();
+    handlers.clear();
+    Object.keys(json)
+        .map(k => ({
+            label: k,
+            ...json[k],
+        }))
+        .forEach(target => {
+            for (const ctx of target.contexts) {
+                handlers[chrome.contextMenus.create({
+                    id: next_val(),
+                    title: `Send ${ctx} to ${target.label}`,
+                    contexts: [ctx],
+                })] = info => sendUrl(target, addContextUrl(ctx, {
+                    srcUrl: info.srcUrl,
+                    linkUrl: info.linkUrl,
+                    pageUrl: info.pageUrl,
+                }));
+            }
+        })
+}
+
 // listen for changes
-chrome.storage.onChanged.addListener(function(changes, area) {
-    if (area != 'sync' || ! changes.hasOwnProperty('targets')) {
+chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'sync' || ! changes.hasOwnProperty('targets')) {
         return;
     }
     rebuild(changes.targets.newValue);
 });
+
+// listen for selections
+chrome.contextMenus.onClicked.addListener(item => {
+    const handler = handlers[item.menuItemId];
+    handler && handler(item);
+});
+
 // initialize
-chrome.storage.sync.get({
-    targets: null
-}, function(items) {
-    rebuild(items.targets);
+chrome.runtime.onInstalled.addListener(function() {
+    chrome.storage.sync.get({
+        targets: null
+    }, function(items) {
+        rebuild(items.targets);
+    });
 });
