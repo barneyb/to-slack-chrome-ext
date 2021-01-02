@@ -7,14 +7,19 @@ function sendUrl(target, info) {
         if (granted) {
             let pt = target.post_type;
             let body = render_body(pt.format, info);
-            // noinspection JSIgnoredPromiseFromCall
             fetch(target.url, {
                 method: "POST",
                 headers: {
                     "Content-Type": pt.content_type,
                 },
                 body,
-            });
+            })
+                .then(r => {
+                    if (!r.ok) {
+                        alert(`${r.status} ${r.statusText}\n\nFailed to post to ${target.url}`)
+                    }
+                })
+                .catch(e => alert(`Failed to post to ${target.url}\n\n${e}`));
         }
     });
 }
