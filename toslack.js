@@ -1,29 +1,44 @@
 /*global chrome */
 function sendUrl(target, info) {
     let origin = target.url.split("/").slice(0, 3).join("/") + "/";
-    chrome.permissions.request({
+    let perms = {
         origins: [origin]
-    }, function(granted) {
-        if (granted) {
-            let pt = target.post_type;
-            let body = render_body(pt.format, info);
-            fetch(target.url, {
-                method: "POST",
-                headers: {
-                    "Content-Type": pt.content_type,
-                },
-                body,
+    };
+
+    function weGotPerms() {
+        let pt = target.post_type;
+        let body = render_body(pt.format, info);
+        fetch(target.url, {
+            method: "POST",
+            headers: {
+                "Content-Type": pt.content_type,
+            },
+            body,
+        })
+            .then(r => {
+                if (!r.ok) {
+                    alert(`${r.status} ${r.statusText}\n\nFailed to post to ${target.url}`)
+                } else {
+                    alert(`${r.status} ${r.statusText}\n\nWoo!`)
+                }
             })
-                .then(r => {
-                    if (!r.ok) {
-                        alert(`${r.status} ${r.statusText}\n\nFailed to post to ${target.url}`)
-                    } else {
-                        alert(`${r.status} ${r.statusText}\n\nWoo!`)
-                    }
-                })
-                .catch(e => alert(`Failed to post to ${target.url}\n\n${e}`));
+            .catch(e => alert(`Failed to post to ${target.url}\n\n${e}`))
+            .finally(() =>
+                chrome.permissions.remove(perms, () => {}));
+    }
+
+    chrome.permissions.contains(perms, function(granted) {
+        if (granted) {
+            weGotPerms();
         } else {
-            alert(`Not allowed to post to ${origin}.`)
+            console.log(`don't have permission for ${origin}...`);
+            chrome.permissions.request(perms, function(granted) {
+                if (granted) {
+                    weGotPerms();
+                } else {
+                    alert(`denied permission for ${origin}.`)
+                }
+            });
         }
     });
 }
