@@ -17,9 +17,13 @@ function sendUrl(target, info) {
                 .then(r => {
                     if (!r.ok) {
                         alert(`${r.status} ${r.statusText}\n\nFailed to post to ${target.url}`)
+                    } else {
+                        alert(`${r.status} ${r.statusText}\n\nWoo!`)
                     }
                 })
                 .catch(e => alert(`Failed to post to ${target.url}\n\n${e}`));
+        } else {
+            alert(`Not allowed to post to ${origin}.`)
         }
     });
 }
