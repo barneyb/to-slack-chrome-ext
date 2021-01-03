@@ -5,6 +5,11 @@ const $ = id => document.getElementById(id)
 
 const KNOWN_CONTEXTS = ["page", "frame", "link", "image", "video", "audio"];
 
+function writeBothPlaces(message) {
+    console.log(message);
+    alert(message);
+}
+
 function parseTargets(str) {
     if (str == null) {
         return {};

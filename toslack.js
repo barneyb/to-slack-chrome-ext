@@ -1,45 +1,66 @@
 /*global chrome */
 function sendUrl(target, info) {
+    console.log("sendUrl", target, info);
     let origin = target.url.split("/").slice(0, 3).join("/") + "/";
-    let perms = {
-        origins: [origin]
-    };
-
-    function weGotPerms() {
+    withPermissions({
+        origins: [origin],
+    }, function () {
         let pt = target.post_type;
         let body = render_body(pt.format, info);
-        fetch(target.url, {
+        console.log(`POST /${target.url.split("/").slice(3).join("/")} HTTP/1.1\nHost: ${target.url.split("/")[2]}\nContent-Type: ${pt.content_type}\n\n${body}`)
+        return fetch(target.url, {
             method: "POST",
             headers: {
                 "Content-Type": pt.content_type,
             },
             body,
-        })
-            .then(r => {
-                if (!r.ok) {
-                    alert(`${r.status} ${r.statusText}\n\nFailed to post to ${target.url}`)
-                } else {
-                    alert(`${r.status} ${r.statusText}\n\nWoo!`)
-                }
-            })
-            .catch(e => alert(`Failed to post to ${target.url}\n\n${e}`))
-            .finally(() =>
-                chrome.permissions.remove(perms, () => {}));
-    }
+        }).then(
+            r => r.ok
+                ? writeBothPlaces(`${r.status} ${r.statusText}\n\nWoo!`)
+                : writeBothPlaces(`${r.status} ${r.statusText}\n\nFailed to post to ${target.url}`),
+            e => writeBothPlaces(`Failed to post to ${target.url}\n\n${e}`),
+        );
+    });
+}
 
-    chrome.permissions.contains(perms, function(granted) {
-        if (granted) {
-            weGotPerms();
+/**
+ * If work returns a thenable, perms will be left in place until it resolves.
+ */
+function withPermissions(perms, work) {
+    console.log("  check perms", perms)
+    const cleanup = () => {
+        console.log("  remove perms", perms)
+        return chrome.permissions.remove(perms, removed => {
+            console.log(removed ? "  success!" : "  failed to remove")
+        });
+    };
+    const doit = () => {
+        const result = work();
+        if (result && typeof result.then === "function") {
+            result.then(cleanup, cleanup);
         } else {
-            console.log(`don't have permission for ${origin}...`);
-            chrome.permissions.request(perms, function(granted) {
-                if (granted) {
-                    weGotPerms();
-                } else {
-                    alert(`denied permission for ${origin}.`)
-                }
-            });
+            cleanup();
         }
+        return result;
+    }
+    return new Promise((resolve, reject) => {
+        chrome.permissions.contains(perms, function (granted) {
+            if (granted) {
+                console.log("  perms already granted")
+                resolve(doit());
+            } else {
+                console.log("  request perms", perms);
+                chrome.permissions.request(perms, function (granted) {
+                    if (granted) {
+                        console.log("  perms granted")
+                        resolve(doit());
+                    } else {
+                        writeBothPlaces(`denied permission for ${origin}.`)
+                        reject("permission denied");
+                    }
+                });
+            }
+        });
     });
 }
 
@@ -83,18 +104,21 @@ function rebuild(targets) {
                     id: next_val(),
                     title: `Send ${ctx} to ${target.label}`,
                     contexts: [ctx],
-                })] = info => sendUrl(target, addContextUrl(ctx, {
-                    srcUrl: info.srcUrl,
-                    linkUrl: info.linkUrl,
-                    pageUrl: info.pageUrl,
-                }));
+                })] = info => {
+                    console.log("CLICK", info, target)
+                    sendUrl(target, addContextUrl(ctx, {
+                        srcUrl: info.srcUrl,
+                        linkUrl: info.linkUrl,
+                        pageUrl: info.pageUrl,
+                    }));
+                };
             }
         })
 }
 
 // listen for changes
 chrome.storage.onChanged.addListener((changes, area) => {
-    if (area !== 'sync' || ! changes.hasOwnProperty('targets')) {
+    if (area !== 'sync' || !changes.hasOwnProperty('targets')) {
         return;
     }
     rebuild(changes.targets.newValue);
@@ -107,10 +131,10 @@ chrome.contextMenus.onClicked.addListener(item => {
 });
 
 // initialize
-chrome.runtime.onInstalled.addListener(function() {
+chrome.runtime.onInstalled.addListener(function () {
     chrome.storage.sync.get({
-        targets: null
-    }, function(items) {
+        targets: null,
+    }, function (items) {
         rebuild(items.targets);
     });
 });
