@@ -18,15 +18,35 @@ function parseTargets(str) {
     if (str === "") {
         return {};
     }
-    const json = JSON.parse(str);
-    const keys = Object.keys(json);
-    for (const n of keys) {
-        let target = json[n];
+    let json = JSON.parse(str);
+    if (!(json instanceof Array)) {
+        json = Object.keys(json).map(key => {
+            let target = json[key];
+            if (typeof target === "string") {
+                target = {
+                    post_type: "slack",
+                    url: target,
+                };
+            }
+            if (!target.label) {
+                target.label = "Send $ctx to $key"
+            }
+            return {
+                ...target,
+                label: render_template(target.label, {key}),
+            };
+        });
+    }
+    return json.map(target => {
         if (typeof target === "string") {
-            json[n] = target = {
+            target = {
                 post_type: "slack",
                 url: target,
             };
+        }
+        if (!target.label) {
+            const parts = target.url.split("/");
+            target.label = "Send $ctx to " + (parts.find(p => p.charAt(0) === "T") || parts[parts.length - 1]);
         }
         if (!target.contexts) {
             target.contexts = ["page", "link", "media"];
@@ -53,12 +73,13 @@ function parseTargets(str) {
         if (!target.post_type.content_type) {
             target.post_type.content_type = "text/plain";
         }
-    }
-    return json;
+        return target;
+    });
 }
 
-function render_body(format, model) {
+function render_template(format, model) {
     if (!format) return model.url;
-    return format.replace(/\$(url|pageUrl|linkUrl|srcUrl)/g, (_, g1) => model[g1]);
+    const RE = new RegExp("\\$(" + Object.keys(model).join("|") + ")", "g");
+    return format.replace(RE, (_, g1) => model[g1]);
 }
 

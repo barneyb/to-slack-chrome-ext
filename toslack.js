@@ -6,8 +6,10 @@ function sendUrl(target, info) {
         origins: [origin],
     }, function () {
         let pt = target.post_type;
-        let body = render_body(pt.format, info);
-        console.log(`POST /${target.url.split("/").slice(3).join("/")} HTTP/1.1\nHost: ${target.url.split("/")[2]}\nContent-Type: ${pt.content_type}\n\n${body}`)
+        let body = render_template(pt.format, info);
+        console.log(`POST /${target.url.split("/")
+            .slice(3)
+            .join("/")} HTTP/1.1\nHost: ${target.url.split("/")[2]}\nContent-Type: ${pt.content_type}\n\n${body}`)
         return fetch(target.url, {
             method: "POST",
             headers: {
@@ -90,30 +92,24 @@ function addContextUrl(ctx, info) {
 }
 
 function rebuild(targets) {
-    const json = parseTargets(targets);
     chrome.contextMenus.removeAll();
     handlers.clear();
-    Object.keys(json)
-        .map(k => ({
-            label: k,
-            ...json[k],
-        }))
-        .forEach(target => {
-            for (const ctx of target.contexts) {
-                handlers[chrome.contextMenus.create({
-                    id: next_val(),
-                    title: `Send ${ctx} to ${target.label}`,
-                    contexts: [ctx],
-                })] = info => {
-                    console.log("CLICK", info, target)
-                    sendUrl(target, addContextUrl(ctx, {
-                        srcUrl: info.srcUrl,
-                        linkUrl: info.linkUrl,
-                        pageUrl: info.pageUrl,
-                    }));
-                };
-            }
-        })
+    parseTargets(targets).forEach(target => {
+        for (const ctx of target.contexts) {
+            handlers[chrome.contextMenus.create({
+                id: next_val(),
+                title: render_template(target.label, {ctx}),
+                contexts: [ctx],
+            })] = info => {
+                console.log("CLICK", info, target)
+                sendUrl(target, addContextUrl(ctx, {
+                    srcUrl: info.srcUrl,
+                    linkUrl: info.linkUrl,
+                    pageUrl: info.pageUrl,
+                }));
+            };
+        }
+    })
 }
 
 // listen for changes

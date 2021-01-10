@@ -1,10 +1,11 @@
 /*global chrome */
 let statusTimeout;
+
 function showStatus(msg) {
     const status = $('status');
     status.textContent = msg;
     clearTimeout(statusTimeout);
-    statusTimeout = setTimeout(function() {
+    statusTimeout = setTimeout(function () {
         status.textContent = '';
     }, 2500);
 }
@@ -28,8 +29,8 @@ function save_options() {
     targets = JSON.stringify(JSON.parse(targets), null, indent);
     textarea.value = targets;
     chrome.storage.sync.set({
-        targets: targets
-    }, function() {
+        targets: targets,
+    }, function () {
         showStatus("Targets saved.");
     });
 }
@@ -38,26 +39,39 @@ function save_options() {
 // stored in chrome.storage.
 function restore_options() {
     chrome.storage.sync.get({
-        targets: null
-    }, function(items) {
+        targets: null,
+    }, function (items) {
         $('targets').value = items.targets;
     });
 }
-document.addEventListener('DOMContentLoaded', restore_options);
-$('save').addEventListener('click',
-    save_options);
 
-try {
-    $('full-example').innerText = JSON.stringify(parseTargets($('example').innerText), null, 4);
-} catch (e) {
-    console.log(e)
-    $('full-example').innerText = e;
+document.addEventListener('DOMContentLoaded', restore_options);
+$('save').addEventListener('click', save_options);
+
+function formatJson(obj) {
+    return JSON.stringify(obj, null, 4);
 }
 
-const config = parseTargets('{"glerg":' + $('custom-example').innerText + '}').glerg;
+function expandConfig(srcId, destId) {
+    try {
+        const expanded = formatJson(parseTargets($(srcId).innerText));
+        if (expanded !== formatJson(parseTargets(expanded))) {
+            // noinspection ExceptionCaughtLocallyJS
+            throw new Error("Expansion was not idempotent!");
+        }
+        $(destId).innerText = expanded;
+    } catch (e) {
+        console.log(e)
+        $(destId).innerText = e;
+    }
+}
+
+expandConfig('example', 'full-example');
+
+const config = parseTargets('{"glerg":' + $('custom-example').innerText + '}')[0];
 let rendered;
 try {
-    rendered = render_body(config.post_type.format, {
+    rendered = render_template(config.post_type.format, {
         url: "https://about.google/",
         pageUrl: "https://google.com/",
     });
@@ -65,7 +79,7 @@ try {
         'Host: ...\n' +
         'Content-Type: ' + config.post_type.content_type + '\n' +
         '\n' +
-        JSON.stringify(JSON.parse(rendered), null, 4);
+        formatJson(JSON.parse(rendered));
 } catch (e) {
     rendered = e;
 }
