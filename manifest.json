@@ -1,5 +1,5 @@
 {
-    "manifest_version": 2,
+    "manifest_version": 3,
 
     "name": "Send to Slack",
     "description": "Easily send pages, media, and links to an HTTP endpoint (e.g., a Slack channel's WebHook).",
@@ -7,10 +7,6 @@
     "permissions": [
         "contextMenus",
         "storage"
-    ],
-    "optional_permissions": [
-        "http://*/",
-        "https://*/"
     ],
     "icons": {
         "16": "icon-16.png",
@@ -22,14 +18,9 @@
     },
     "options_ui": {
         "page": "options.html",
-        "chrome_style": true,
         "open_in_tab": true
     },
     "background": {
-        "scripts": [
-            "utils.js",
-            "toslack.js"
-        ],
-        "persistent": false
+        "service_worker": "toslack.js"
     }
 }

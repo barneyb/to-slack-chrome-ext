@@ -1,72 +1,29 @@
+self.importScripts("utils.js");
+
 /*global chrome */
 function sendUrl(target, info) {
     console.log("sendUrl", target, info);
-    let origin = target.url.split("/").slice(0, 3).join("/") + "/";
-    withPermissions({
-        origins: [origin],
-    }, function () {
-        let pt = target.post_type;
-        let body = render_template(pt.format, info);
-        console.log(`POST /${target.url.split("/")
-            .slice(3)
-            .join("/")} HTTP/1.1\nHost: ${target.url.split("/")[2]}\nContent-Type: ${pt.content_type}\n\n${body}`)
-        return fetch(target.url, {
-            method: "POST",
-            headers: {
-                "Content-Type": pt.content_type,
-            },
-            body,
-        }).then(
-            r => r.ok
-                ? writeBothPlaces(`${r.status} ${r.statusText}\n\nWoo!`)
-                : writeBothPlaces(`${r.status} ${r.statusText}\n\nFailed to post to ${target.url}`),
-            e => writeBothPlaces(`Failed to post to ${target.url}\n\n${e}`),
-        );
-    });
+    let pt = target.post_type;
+    let body = render_template(pt.format, info);
+    console.log(`POST /${target.url.split("/")
+        .slice(3)
+        .join("/")} HTTP/1.1\nHost: ${target.url.split("/")[2]}\nContent-Type: ${pt.content_type}\n\n${body}`)
+    return fetch(target.url, {
+        method: "POST",
+        headers: {
+            "Content-Type": pt.content_type,
+        },
+        mode: "no-cors",
+        body,
+    }).then(
+        r => r.ok
+            ? console.log(`${r.status} ${r.statusText}\n\nWoo!`)
+            : r.status === 0
+                ? console.log(`No CORS, so ... good enough?`)
+                : console.log(`${r.status} ${r.statusText}\n\nFailed to post to ${target.url}`),
+        e => console.log(`Failed to post to ${target.url}\n\n${e}`),
+    );
 }
-
-/**
- * If work returns a thenable, perms will be left in place until it resolves.
- */
-function withPermissions(perms, work) {
-    console.log("  check perms", perms)
-    const cleanup = () => {
-        console.log("  remove perms", perms)
-        return chrome.permissions.remove(perms, removed => {
-            console.log(removed ? "  success!" : "  failed to remove")
-        });
-    };
-    const doit = () => {
-        const result = work();
-        if (result && typeof result.then === "function") {
-            result.then(cleanup, cleanup);
-        } else {
-            cleanup();
-        }
-        return result;
-    }
-    return new Promise((resolve, reject) => {
-        chrome.permissions.contains(perms, function (granted) {
-            if (granted) {
-                console.log("  perms already granted")
-                resolve(doit());
-            } else {
-                console.log("  request perms", perms);
-                chrome.permissions.request(perms, function (granted) {
-                    if (granted) {
-                        console.log("  perms granted")
-                        resolve(doit());
-                    } else {
-                        writeBothPlaces(`denied permission for ${origin}.`)
-                        reject("permission denied");
-                    }
-                });
-            }
-        });
-    });
-}
-
-const handlers = new Map();
 
 function addContextUrl(ctx, info) {
     switch (ctx) {
@@ -92,16 +49,20 @@ function addContextUrl(ctx, info) {
 }
 
 function rebuild(targets) {
+    console.log("REBUILD")
     chrome.contextMenus.removeAll();
-    handlers.clear();
+    const handlers = new Map();
     parseTargets(targets).forEach(target => {
+        console.log("TARGET", target)
         for (const ctx of target.contexts) {
+            const title = render_template(target.label, {ctx});
+            console.log("REGISTER", title, ctx)
             handlers[chrome.contextMenus.create({
-                id: next_val(),
-                title: render_template(target.label, {ctx}),
+                id: `${title}@${ctx}`,
+                title,
                 contexts: [ctx],
             })] = info => {
-                console.log("CLICK", info, target)
+                console.log("HANDLE CLICK", info, target)
                 sendUrl(target, addContextUrl(ctx, {
                     srcUrl: info.srcUrl,
                     linkUrl: info.linkUrl,
@@ -109,7 +70,8 @@ function rebuild(targets) {
                 }));
             };
         }
-    })
+    });
+    return handlers;
 }
 
 // listen for changes
@@ -117,20 +79,31 @@ chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'sync' || !changes.hasOwnProperty('targets')) {
         return;
     }
+    console.log("STORAGE CHANGE")
     rebuild(changes.targets.newValue);
 });
 
 // listen for selections
 chrome.contextMenus.onClicked.addListener(item => {
-    const handler = handlers[item.menuItemId];
-    handler && handler(item);
+    console.log("CLICK", item)
+    loadTargetsAndRebuild((handlers) => {
+        console.log("CLICK", item, Object.keys(handlers))
+        const handler = handlers[item.menuItemId];
+        handler && handler(item);
+    });
 });
+
+function loadTargetsAndRebuild(callback) {
+    return chrome.storage.sync.get({
+        targets: null,
+    }, function (items) {
+        const handlers = rebuild(items.targets);
+        callback && callback(handlers);
+    });
+}
 
 // initialize
 chrome.runtime.onInstalled.addListener(function () {
-    chrome.storage.sync.get({
-        targets: null,
-    }, function (items) {
-        rebuild(items.targets);
-    });
+    console.log("INSTALLED")
+    loadTargetsAndRebuild();
 });
