@@ -32,7 +32,7 @@ function withPermissions(perms, work) {
     console.log("  check perms", perms)
     const cleanup = () => {
         console.log("  remove perms", perms)
-        return chrome.permissions.remove(perms, removed => {
+        return browser.permissions.remove(perms, removed => {
             console.log(removed ? "  success!" : "  failed to remove")
         });
     };
@@ -46,13 +46,13 @@ function withPermissions(perms, work) {
         return result;
     }
     return new Promise((resolve, reject) => {
-        chrome.permissions.contains(perms, function (granted) {
+        browser.permissions.contains(perms, function (granted) {
             if (granted) {
                 console.log("  perms already granted")
                 resolve(doit());
             } else {
                 console.log("  request perms", perms);
-                chrome.permissions.request(perms, function (granted) {
+                browser.permissions.request(perms, function (granted) {
                     if (granted) {
                         console.log("  perms granted")
                         resolve(doit());
@@ -92,11 +92,11 @@ function addContextUrl(ctx, info) {
 }
 
 function rebuild(targets) {
-    chrome.contextMenus.removeAll();
+    browser.contextMenus.removeAll();
     handlers.clear();
     parseTargets(targets).forEach(target => {
         for (const ctx of target.contexts) {
-            handlers[chrome.contextMenus.create({
+            handlers[browser.contextMenus.create({
                 id: next_val(),
                 title: render_template(target.label, {ctx}),
                 contexts: [ctx],
@@ -113,7 +113,7 @@ function rebuild(targets) {
 }
 
 // listen for changes
-chrome.storage.onChanged.addListener((changes, area) => {
+browser.storage.onChanged.addListener((changes, area) => {
     if (area !== 'sync' || !changes.hasOwnProperty('targets')) {
         return;
     }
@@ -121,14 +121,14 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 // listen for selections
-chrome.contextMenus.onClicked.addListener(item => {
+browser.contextMenus.onClicked.addListener(item => {
     const handler = handlers[item.menuItemId];
     handler && handler(item);
 });
 
 // initialize
-chrome.runtime.onInstalled.addListener(function () {
-    chrome.storage.sync.get({
+browser.runtime.onInstalled.addListener(function () {
+    browser.storage.sync.get({
         targets: null,
     }, function (items) {
         rebuild(items.targets);

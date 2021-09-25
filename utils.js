@@ -12,11 +12,11 @@ function writeBothPlaces(message) {
 
 function parseTargets(str) {
     if (str == null) {
-        return {};
+        return [];
     }
     str = str.trim();
     if (str === "") {
-        return {};
+        return [];
     }
     let json = JSON.parse(str);
     if (!(json instanceof Array)) {

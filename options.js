@@ -10,7 +10,7 @@ function showStatus(msg) {
     }, 2500);
 }
 
-// Saves options to chrome.storage.sync.
+// Saves options to browser.storage.sync.
 function save_options() {
     const textarea = $('targets');
     let targets = textarea.value;
@@ -28,7 +28,7 @@ function save_options() {
     }
     targets = JSON.stringify(JSON.parse(targets), null, indent);
     textarea.value = targets;
-    chrome.storage.sync.set({
+    browser.storage.sync.set({
         targets: targets,
     }, function () {
         showStatus("Targets saved.");
@@ -36,9 +36,9 @@ function save_options() {
 }
 
 // Restores select box and checkbox state using the preferences
-// stored in chrome.storage.
+// stored in browser.storage.
 function restore_options() {
-    chrome.storage.sync.get({
+    browser.storage.sync.get({
         targets: null,
     }, function (items) {
         $('targets').value = items.targets;
