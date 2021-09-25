@@ -31,10 +31,10 @@ function sendUrl(target, info) {
 function withPermissions(perms, work) {
     console.log("  check perms", perms)
     const cleanup = () => {
-        console.log("  remove perms", perms)
-        return browser.permissions.remove(perms, removed => {
-            console.log(removed ? "  success!" : "  failed to remove")
-        });
+        console.log("  DON'T remove perms", perms)
+        // return browser.permissions.remove(perms, removed => {
+        //     console.log(removed ? "  success!" : "  failed to remove")
+        // });
     };
     const doit = () => {
         const result = work();
@@ -45,25 +45,35 @@ function withPermissions(perms, work) {
         }
         return result;
     }
-    return new Promise((resolve, reject) => {
-        browser.permissions.contains(perms, function (granted) {
+    return browser.permissions.request(perms)
+        .then(function (granted) {
             if (granted) {
-                console.log("  perms already granted")
-                resolve(doit());
+                console.log("  perms granted")
+                return doit();
             } else {
-                console.log("  request perms", perms);
-                browser.permissions.request(perms, function (granted) {
-                    if (granted) {
-                        console.log("  perms granted")
-                        resolve(doit());
-                    } else {
-                        writeBothPlaces(`denied permission for ${origin}.`)
-                        reject("permission denied");
-                    }
-                });
+                writeBothPlaces(`denied permission for ${origin}.`)
+                throw "permission denied";
             }
         });
-    });
+    // return new Promise((resolve, reject) => {
+    //     browser.permissions.contains(perms, function (granted) {
+    //         if (granted) {
+    //             console.log("  perms already granted")
+    //             resolve(doit());
+    //         } else {
+    //             console.log("  request perms", perms);
+    //             browser.permissions.request(perms, function (granted) {
+    //                 if (granted) {
+    //                     console.log("  perms granted")
+    //                     resolve(doit());
+    //                 } else {
+    //                     writeBothPlaces(`denied permission for ${origin}.`)
+    //                     reject("permission denied");
+    //                 }
+    //             });
+    //         }
+    //     });
+    // });
 }
 
 const handlers = new Map();
