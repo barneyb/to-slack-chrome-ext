@@ -1,28 +1,23 @@
 /*global chrome */
 function sendUrl(target, info) {
     console.log("sendUrl", target, info);
-    let origin = target.url.split("/").slice(0, 3).join("/") + "/";
-    withPermissions({
-        origins: [origin],
-    }, function () {
-        let pt = target.post_type;
-        let body = render_template(pt.format, info);
-        console.log(`POST /${target.url.split("/")
-            .slice(3)
-            .join("/")} HTTP/1.1\nHost: ${target.url.split("/")[2]}\nContent-Type: ${pt.content_type}\n\n${body}`)
-        return fetch(target.url, {
-            method: "POST",
-            headers: {
-                "Content-Type": pt.content_type,
-            },
-            body,
-        }).then(
-            r => r.ok
-                ? writeBothPlaces(`${r.status} ${r.statusText}\n\nWoo!`)
-                : writeBothPlaces(`${r.status} ${r.statusText}\n\nFailed to post to ${target.url}`),
-            e => writeBothPlaces(`Failed to post to ${target.url}\n\n${e}`),
-        );
-    });
+    let pt = target.post_type;
+    let body = render_template(pt.format, info);
+    console.log(`POST /${target.url.split("/")
+        .slice(3)
+        .join("/")} HTTP/1.1\nHost: ${target.url.split("/")[2]}\nContent-Type: ${pt.content_type}\n\n${body}`)
+    return fetch(target.url, {
+        method: "POST",
+        headers: {
+            "Content-Type": pt.content_type,
+        },
+        body,
+    }).then(
+        r => r.ok
+            ? writeBothPlaces(`${r.status} ${r.statusText}\n\nWoo!`)
+            : writeBothPlaces(`${r.status} ${r.statusText}\n\nFailed to post to ${target.url}`),
+        e => writeBothPlaces(`Failed to post to ${target.url}\n\n${e}`),
+    );
 }
 
 /**
@@ -76,8 +71,6 @@ function withPermissions(perms, work) {
     // });
 }
 
-const handlers = new Map();
-
 function addContextUrl(ctx, info) {
     switch (ctx) {
         case "page":
@@ -103,21 +96,13 @@ function addContextUrl(ctx, info) {
 
 function rebuild(targets) {
     browser.contextMenus.removeAll();
-    handlers.clear();
-    parseTargets(targets).forEach(target => {
+    parseTargets(targets).forEach((target, i) => {
         for (const ctx of target.contexts) {
-            handlers[browser.contextMenus.create({
-                id: next_val(),
-                title: render_template(target.label, {ctx}),
-                contexts: [ctx],
-            })] = info => {
-                console.log("CLICK", info, target)
-                sendUrl(target, addContextUrl(ctx, {
-                    srcUrl: info.srcUrl,
-                    linkUrl: info.linkUrl,
-                    pageUrl: info.pageUrl,
-                }));
-            };
+            browser.contextMenus.create({
+                id: `${i}:${ctx}:${target.url}`,
+                title: render_template(target.label, { ctx }),
+                contexts: [ ctx ],
+            });
         }
     })
 }
@@ -132,8 +117,36 @@ browser.storage.onChanged.addListener((changes, area) => {
 
 // listen for selections
 browser.contextMenus.onClicked.addListener(item => {
-    const handler = handlers[item.menuItemId];
-    handler && handler(item);
+    const [ i, ctx, ...rest ] = item.menuItemId.split(":");
+    const url = rest.join(":");
+    console.log("CLICK", item, ctx, url)
+    let origin = url.split("/").slice(0, 3).join("/") + "/";
+    withPermissions({
+        origins: [ origin ],
+    }, function () {
+        return new Promise(resolve => {
+            browser.storage.sync.get({
+                targets: null,
+            }, function (items) {
+                const targets = parseTargets(items.targets);
+                if (i >= targets.length) {
+                    console.log("Bad index", i, targets)
+                    return;
+                }
+                const target = targets[i];
+                if (target.url !== url) {
+                    console.log("Bad url", url, target)
+                    return;
+                }
+                sendUrl(target, addContextUrl(ctx, {
+                    srcUrl: item.srcUrl,
+                    linkUrl: item.linkUrl,
+                    pageUrl: item.pageUrl,
+                }));
+                resolve();
+            });
+        });
+    });
 });
 
 // initialize

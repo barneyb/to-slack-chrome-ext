@@ -1,13 +1,10 @@
-let id_seq = 0;
-const next_val = () => (++id_seq).toString()
-
 const $ = id => document.getElementById(id)
 
 const KNOWN_CONTEXTS = ["page", "frame", "link", "image", "video", "audio"];
 
 function writeBothPlaces(message) {
     console.log(message);
-    alert(message);
+    // alert(message);
 }
 
 function parseTargets(str) {
