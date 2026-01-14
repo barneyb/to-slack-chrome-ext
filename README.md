@@ -1,6 +1,6 @@
 # to-slack-chrome-ext
 
-A simple chrome extension for sending 'stuff' to HTTP endpoints. For example,
+A simple Firefox extension for sending 'stuff' to HTTP endpoints. For example,
 a Slack channel (via its WebHook).
 
 Once installed, open the extension options and configure a target or three.
@@ -11,7 +11,7 @@ Once installed, open the extension options and configure a target or three.
         "contexts": ["media"],
         "url": "https://example.com/jasmine"
     },
-    "@jasmine": "https://hooks.slack.com/services/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"
+    "@jasmine": "https://hooks.slack.com/services/T123.../BD456..../a-neat-secret"
 }
 ```
 
